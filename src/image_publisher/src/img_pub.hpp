@@ -40,6 +40,7 @@ private:
 	void publishMotorRotation(int id, int anlge);
 	int detectScrewType(cv::Mat frame);
 
+	int idx;
 	XNn_inference inf;
 	cv::VideoCapture capture;
 	rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr publisher_;

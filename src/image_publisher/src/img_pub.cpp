@@ -6,9 +6,12 @@
 // 0.29 degrees per 1 impulse.
 // Angles 300 - 360 are in invalid range.
 #define MOTRO_ANGLES_TO_IMPULZES (1/0.29)
+#define BASE_MOTOR_ID 1
+#define CAMERA_MOTOR_ID 2
 
 ImagePublisherNode::ImagePublisherNode()
 	: rclcpp::Node("image_publisher_node")
+	, idx(4)
 	, capture(0)
 {
 	int status = XNn_inference_Initialize(&inf, "nn_inference");
@@ -22,7 +25,7 @@ ImagePublisherNode::ImagePublisherNode()
 
 	cv_bridge_ = std::make_shared<cv_bridge::CvImage>();
 	motorPositionPublsher_ = this->create_publisher<SetPosition>("/set_position", 10);
-	timer_ = this->create_wall_timer(std::chrono::seconds(1), std::bind(&ImagePublisherNode::publishMotorRotation, this));
+	timer_ = this->create_wall_timer(std::chrono::seconds(1), [this] () { return this->publishMotorRotation(BASE_MOTOR_ID, 0); });
 }
 
 std::vector<float> flatten(const cv::Mat &frame)
@@ -69,6 +72,9 @@ void ImagePublisherNode::publishImage()
 
 void ImagePublisherNode::publishMotorRotation(int id, int angle)
 {
+	angle = idx * 80;
+	idx++;
+
 	SetPosition msg;
 	msg.id = id;
 	msg.position = angle;
