@@ -71,7 +71,7 @@ void ImagePublisherNode::publishMotorRotation(int id, int angle)
 {
 	SetPosition msg;
 	msg.id = id;
-	msg.position = MOTRO_ANGLES_TO_IMPULZES * angle;
+	msg.position = angle;
 	motorPositionPublsher_->publish(msg);
 }
 
