@@ -24,9 +24,9 @@ public:
 	using GetPosition = dynamixel_sdk_custom_interfaces::srv::GetPosition;
 
 	ImagePublisherNode();
+	~ImagePublisherNode();
 
 private:
-	void publishImage();
 
 	/**
 	 * @brief Publishes a desired angle to the dynamixel control node.
@@ -40,13 +40,11 @@ private:
 	void publishMotorRotation(int id, int anlge);
 	int detectScrewType(cv::Mat frame);
 
-	int idx;
-	XNn_inference inf;
-	// cv::VideoCapture capture;
-	rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr publisher_;
-	rclcpp::TimerBase::SharedPtr timer_;
-	rclcpp::Publisher<SetPosition>::SharedPtr motorPositionPublsher_;
-	rclcpp::Publisher<GetPosition>::SharedPtr motorPositionSubscriber_;
-	std::shared_ptr<cv_bridge::CvImage> cv_bridge_;
+	int m_idx;
+	XNn_inference m_inference;
+	cv::VideoCapture m_capture;
+	rclcpp::TimerBase::SharedPtr m_timer;
+	rclcpp::Publisher<SetPosition>::SharedPtr m_motorPositionPublsher;
+	std::shared_ptr<cv_bridge::CvImage> m_cvBridge;
 };
 

@@ -11,21 +11,23 @@
 
 ImagePublisherNode::ImagePublisherNode()
 	: rclcpp::Node("image_publisher_node")
-	, idx(4)
+	, m_idx(4)
 	// , capture(0)
 {
-	int status = XNn_inference_Initialize(&inf, "nn_inference");
+	int status = XNn_inference_Initialize(&m_inference, "nn_inference");
 	if (status != XST_SUCCESS) {
 		std::cout << "Could not initialize IP block.\n";
 		exit(1);
 	}
 
-	publisher_ = this->create_publisher<sensor_msgs::msg::Image>("/image_raw", 10);
-	// timer_ = this->create_wall_timer(std::chrono::seconds(1), std::bind(&ImagePublisherNode::publishImage, this));
+	m_cvBridge = std::make_shared<cv_bridge::CvImage>();
+	m_motorPositionPublsher = this->create_publisher<SetPosition>("/set_position", 10);
+	m_timer = this->create_wall_timer(std::chrono::seconds(1), [this] () { this->publishMotorRotation(BASE_MOTOR_ID, 0); });
+}
 
-	cv_bridge_ = std::make_shared<cv_bridge::CvImage>();
-	motorPositionPublsher_ = this->create_publisher<SetPosition>("/set_position", 10);
-	timer_ = this->create_wall_timer(std::chrono::seconds(1), [this] () { return this->publishMotorRotation(BASE_MOTOR_ID, 0); });
+ImagePublisherNode::~ImagePublisherNode()
+{
+	XNn_inference_Release(&m_inference);
 }
 
 std::vector<float> flatten(const cv::Mat &frame)
@@ -49,37 +51,32 @@ int ImagePublisherNode::detectScrewType(cv::Mat frame)
 	cv::cvtColor(frame, frame, cv::COLOR_BGR2GRAY);
 	auto check = flatten(frame);
 
-	while (!XNn_inference_IsReady(&inf)) {}
-	XNn_inference_Write_Data_In_Words(&inf, 0, (word_type *)check.data(), IMG_SIZE);
+	while (!XNn_inference_IsReady(&m_inference)) {}
+	XNn_inference_Write_Data_In_Words(&m_inference, 0, (word_type *)check.data(), IMG_SIZE);
 
-	XNn_inference_Start(&inf);
+	XNn_inference_Start(&m_inference);
 
-	while (!XNn_inference_IsDone(&inf)) {}
+	while (!XNn_inference_IsDone(&m_inference)) {}
 
-	return XNn_inference_Get_Pred_out(&inf);
-}
-
-void ImagePublisherNode::publishImage()
-{
-	cv::Mat frame;
-	// capture >> frame;
-
-	// Publish the ROS Image message to the /image_raw topic
-	auto ros_image_msg = cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", frame).toImageMsg();
-	publisher_->publish(*ros_image_msg);
-	RCLCPP_INFO(this->get_logger(), "Image published");
+	return XNn_inference_Get_Pred_out(&m_inference);
 }
 
 void ImagePublisherNode::publishMotorRotation(int id, int angle)
 {
-	angle = idx * 80;
-	idx++;
+	m_timer->cancel();
+
+	sleep(2);
+
+	angle = m_idx * 80;
+	m_idx++;
 
 	SetPosition msg;
 	msg.id = id;
 	msg.position = angle;
 	RCLCPP_INFO(this->get_logger(), "Publishing [ID: %d] [Goal Position: %d]", msg.id, msg.position);
-	motorPositionPublsher_->publish(msg);
+	m_motorPositionPublsher->publish(msg);
+
+	m_timer->reset();
 }
 
 int main(int argc, char *argv[]) {
