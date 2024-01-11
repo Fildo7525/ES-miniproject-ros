@@ -40,17 +40,17 @@
 #include "read_write_node.hpp"
 
 // Control table address for X series (except XL-320)
-#define ADDR_OPERATING_MODE 11
-#define ADDR_TORQUE_ENABLE 64
-#define ADDR_GOAL_POSITION 116
-#define ADDR_PRESENT_POSITION 132
+#define ADDR_OPERATING_MODE 8
+#define ADDR_TORQUE_ENABLE 24
+#define ADDR_GOAL_POSITION 30
+#define ADDR_PRESENT_POSITION 36
 
 // Protocol version
-#define PROTOCOL_VERSION 2.0  // Default Protocol version of DYNAMIXEL X series.
+#define PROTOCOL_VERSION 1.0  // Default Protocol version of DYNAMIXEL X series.
 
 // Default setting
-#define BAUDRATE 57600  // Default Baudrate of DYNAMIXEL X series
-#define DEVICE_NAME "/dev/ttyUSB0"  // [Linux]: "/dev/ttyUSB*", [Windows]: "COM*"
+#define BAUDRATE 1000000  // Default Baudrate of DYNAMIXEL X series
+#define DEVICE_NAME "/dev/ttyACM0"  // [Linux]: "/dev/ttyUSB*", [Windows]: "COM*"
 
 dynamixel::PortHandler * portHandler;
 dynamixel::PacketHandler * packetHandler;
@@ -177,7 +177,7 @@ int main(int argc, char * argv[])
   // Open Serial Port
   dxl_comm_result = portHandler->openPort();
   if (dxl_comm_result == false) {
-    RCLCPP_ERROR(rclcpp::get_logger("read_write_node"), "Failed to open the port!");
+    RCLCPP_ERROR(rclcpp::get_logger("read_write_node"), std::string("Failed to open the port ") + DEVICE_NAME);
     return -1;
   } else {
     RCLCPP_INFO(rclcpp::get_logger("read_write_node"), "Succeeded to open the port.");
