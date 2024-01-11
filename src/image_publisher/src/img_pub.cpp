@@ -72,6 +72,7 @@ void ImagePublisherNode::publishMotorRotation(int id, int angle)
 	SetPosition msg;
 	msg.id = id;
 	msg.position = angle;
+	RCLCPP_INFO(this->get_logger(), "Publishing [ID: %d] [Goal Position: %d]", msg.id, msg.position);
 	motorPositionPublsher_->publish(msg);
 }
 
