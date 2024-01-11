@@ -42,7 +42,7 @@ private:
 
 	int idx;
 	XNn_inference inf;
-	cv::VideoCapture capture;
+	// cv::VideoCapture capture;
 	rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr publisher_;
 	rclcpp::TimerBase::SharedPtr timer_;
 	rclcpp::Publisher<SetPosition>::SharedPtr motorPositionPublsher_;

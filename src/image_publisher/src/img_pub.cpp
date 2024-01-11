@@ -12,7 +12,7 @@
 ImagePublisherNode::ImagePublisherNode()
 	: rclcpp::Node("image_publisher_node")
 	, idx(4)
-	, capture(0)
+	// , capture(0)
 {
 	int status = XNn_inference_Initialize(&inf, "nn_inference");
 	if (status != XST_SUCCESS) {
@@ -62,7 +62,7 @@ int ImagePublisherNode::detectScrewType(cv::Mat frame)
 void ImagePublisherNode::publishImage()
 {
 	cv::Mat frame;
-	capture >> frame;
+	// capture >> frame;
 
 	// Publish the ROS Image message to the /image_raw topic
 	auto ros_image_msg = cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", frame).toImageMsg();
