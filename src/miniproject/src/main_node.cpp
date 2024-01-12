@@ -21,6 +21,7 @@ ImagePublisherNode::ImagePublisherNode()
 		exit(1);
 	}
 
+	sleep(2);
 
 	// publisher_ = this->create_publisher<sensor_msgs::msg::Image>("/image_raw", 10);
 
@@ -113,11 +114,13 @@ ImagePublisherNode::SetPosition ImagePublisherNode::constructMsg(int id, int ang
 
 void ImagePublisherNode::findScrewRotation()
 {
-	for (int i = 0; i < 128; i++) {
-		m_motorPositionPublsher->publish(constructMsg(CAMERA_MOTOR_ID, i*8));
+	for (int i = 0; i < 512; i++) {
+		m_motorPositionPublsher->publish(constructMsg(CAMERA_MOTOR_ID, i*4));
+		usleep(500);
+
 		if (checkIfFits(m_frame)) {
-			m_motorPositionPublsher->publish(constructMsg(CAMERA_MOTOR_ID, (i-1)*8));
-			return;
+			m_motorPositionPublsher->publish(constructMsg(CAMERA_MOTOR_ID, (i-1)*4));
+			exit(0);
 		}
 	}
 }
