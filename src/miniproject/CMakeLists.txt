@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(image_publisher)
+project(miniproject)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -26,8 +26,8 @@ find_package(cv_bridge REQUIRED)
 find_package(dynamixel_sdk REQUIRED)
 find_package(dynamixel_sdk_custom_interfaces REQUIRED)
 
-add_executable(img_pub src/img_pub.cpp src/img_pub.hpp)
-ament_target_dependencies(img_pub
+add_executable(main src/main_node.cpp src/main_node.hpp)
+ament_target_dependencies(main
 	rclcpp
 	sensor_msgs
 	cv_bridge
@@ -36,7 +36,7 @@ ament_target_dependencies(img_pub
 )
 
 install(TARGETS
-	img_pub
+	main
 	DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -45,7 +45,7 @@ install(
 	DESTINATION share/${PROJECT_NAME}/
 )
 
-target_link_libraries(img_pub
+target_link_libraries(main
 	drivers
 )
 

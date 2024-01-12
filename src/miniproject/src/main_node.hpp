@@ -20,6 +20,18 @@ class ImagePublisherNode
 	: public rclcpp::Node
 {
 public:
+
+	enum class ScrewType
+	{
+		// Screwable
+		Hexagonal,
+
+		// Screwable
+		Nut,
+
+		// Unscrewable
+		Philips
+	};
 	using SetPosition = dynamixel_sdk_custom_interfaces::msg::SetPosition;
 	using GetPosition = dynamixel_sdk_custom_interfaces::srv::GetPosition;
 
@@ -27,6 +39,16 @@ public:
 	~ImagePublisherNode();
 
 private:
+
+	std::vector<float> flatten(cv::Mat image);
+
+	void publishImage(const cv::Mat &frame);
+
+	void getImageCallback(const sensor_msgs::msg::Image::SharedPtr msg);
+
+	bool checkIfFits(const cv::Mat& frame);
+
+	void findRotation();
 
 	/**
 	 * @brief Publishes a desired angle to the dynamixel control node.
@@ -38,12 +60,31 @@ private:
 	 * @param anlge Whished final rotation of the motor
 	 */
 	void publishMotorRotation(int id, int anlge);
-	int detectScrewType(cv::Mat frame);
+
+	/**
+	 * @brief Invokes the IP in FPGA and checks if the screw on the image is screwable.
+	 *
+	 * @param frame Frame capture from camera.
+	 * @return Type of the screw.
+	 */
+	ScrewType detectScrewType(cv::Mat frame);
+
+	std::string getName(ScrewType screwType);
+
 
 	int m_idx;
+	cv::Mat m_frame;
 	XNn_inference m_inference;
-	cv::VideoCapture m_capture;
+	std::ofstream file;
+	ScrewType m_detectedScrewType;
+
 	rclcpp::TimerBase::SharedPtr m_timer;
+
+	// Subscriber to the /image_raw topic that the camera node created.
+	rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr m_cameraSubscriber;
+
+	// Publishers
+	rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr m_publisher;
 	rclcpp::Publisher<SetPosition>::SharedPtr m_motorPositionPublsher;
 	std::shared_ptr<cv_bridge::CvImage> m_cvBridge;
 };

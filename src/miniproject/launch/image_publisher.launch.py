@@ -14,8 +14,14 @@ def generate_launch_description():
 			emulate_tty=True
 		),
 		Node(
-			package='image_publisher',
-			executable='img_pub',
+			package='usb_cam',
+			executable='usb_cam_node_exe',
+			output='screen',
+			emulate_tty=True
+		),
+		Node(
+			package='miniproject',
+			executable='main',
 			output='screen',
 			emulate_tty=True
 		)
