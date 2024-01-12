@@ -23,8 +23,6 @@ ImagePublisherNode::ImagePublisherNode()
 
 	sleep(2);
 
-	// publisher_ = this->create_publisher<sensor_msgs::msg::Image>("/image_raw", 10);
-
 	m_cameraSubscriber = this->create_subscription<sensor_msgs::msg::Image>(
 		"/image_raw", 10, std::bind(&ImagePublisherNode::getImageCallback, this, std::placeholders::_1));
 
