@@ -9,7 +9,7 @@
 // Angles 300 - 360 are in invalid range.
 #define MOTRO_ANGLES_TO_IMPULZES (1/0.29)
 #define BASE_MOTOR_ID 1
-#define CAMERA_MOTOR_ID 2
+#define CAMERA_MOTOR_ID 1
 
 ImagePublisherNode::ImagePublisherNode()
 	: rclcpp::Node("main_node")
@@ -28,11 +28,11 @@ ImagePublisherNode::ImagePublisherNode()
 	m_cameraSubscriber = this->create_subscription<sensor_msgs::msg::Image>(
 		"/image_raw", 10, std::bind(&ImagePublisherNode::getImageCallback, this, std::placeholders::_1));
 
-	m_publisher = this->create_publisher<sensor_msgs::msg::Image>("/processed_img", 10);
+	m_processedImagePublisher = this->create_publisher<sensor_msgs::msg::Image>("/processed_img", 10);
 
 	m_cvBridge = std::make_shared<cv_bridge::CvImage>();
 	m_motorPositionPublsher = this->create_publisher<SetPosition>("/set_position", 10);
-	m_timer = this->create_wall_timer(std::chrono::seconds(1), [this] () { this->publishBaseMotorRotation(BASE_MOTOR_ID); });
+	m_timer = this->create_wall_timer(std::chrono::seconds(1), [this] () { this->findScrewRotation(); });
 	RCLCPP_INFO(this->get_logger(), "Constructed");
 }
 
@@ -57,7 +57,7 @@ void ImagePublisherNode::publishImage(const cv::Mat &frame)
 {
 	// Publish the ROS Image message to the /image_raw topic
 	auto ros_image_msg = cv_bridge::CvImage(std_msgs::msg::Header(), "mono8", frame).toImageMsg();
-	m_publisher->publish(*ros_image_msg);
+	m_processedImagePublisher->publish(*ros_image_msg);
 }
 
 void ImagePublisherNode::getImageCallback(const sensor_msgs::msg::Image::SharedPtr msg)
@@ -91,8 +91,18 @@ bool ImagePublisherNode::checkIfFits(const cv::Mat& frame)
 	// Iterate through the lines and check if any line is perpendicular to the top border
 	if (!lines.empty()) {
 		for (const auto& line : lines) {
-			int x1, x2;
-			std::tie(x1, std::ignore, x2, std::ignore) = std::tie(line[0], line[1], line[2], line[3]);
+			int x1, y1, x2, y2;
+			std::tie(x1, y1, x2, y2) = std::tie(line[0],line[1],line[2],line[3]);
+
+			// Check if the line is approximately vertical
+			if (std::abs(x1 - x2) < 5) { // and y1 < 10:  // Adjust the threshold as needed
+				std::cout << "A line is perpendicular to the top border." << std::endl;
+				// You can also draw the line for visualization
+				cv::line(frame, cv::Point(x1, y1), cv::Point(x2, y2), cv::Scalar(0, 255, 0), 2);
+			} else {
+				cv::line(frame, cv::Point(x1, y1), cv::Point(x2, y2), cv::Scalar(0, 0, 255), 2);
+			}
+			publishImage(frame);
 
 			// Check if the line is approximately vertical
 			if (std::abs(x1 - x2) < 5) { // Adjust the threshold if needed

@@ -85,7 +85,7 @@ private:
 	rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr m_cameraSubscriber;
 
 	// Publishers
-	rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr m_publisher;
+	rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr m_processedImagePublisher;
 	rclcpp::Publisher<SetPosition>::SharedPtr m_motorPositionPublsher;
 	std::shared_ptr<cv_bridge::CvImage> m_cvBridge;
 };
