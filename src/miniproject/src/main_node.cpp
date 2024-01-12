@@ -26,12 +26,12 @@ ImagePublisherNode::ImagePublisherNode()
 	m_cameraSubscriber = this->create_subscription<sensor_msgs::msg::Image>(
 		"/image_raw", 10, std::bind(&ImagePublisherNode::getImageCallback, this, std::placeholders::_1));
 
-	m_publisher = this->create_publisher<sensor_msgs::msg::Image>("/processed_img", 10);
-
-	m_cvBridge = std::make_shared<cv_bridge::CvImage>();
-	m_motorPositionPublsher = this->create_publisher<SetPosition>("/set_position", 10);
-	m_timer = this->create_wall_timer(std::chrono::seconds(1), [this] () { this->publishBaseMotorRotation(BASE_MOTOR_ID); });
-	RCLCPP_INFO(this->get_logger(), "Constructed");
+	// m_publisher = this->create_publisher<sensor_msgs::msg::Image>("/processed_img", 10);
+	//
+	// m_cvBridge = std::make_shared<cv_bridge::CvImage>();
+	// m_motorPositionPublsher = this->create_publisher<SetPosition>("/set_position", 10);
+	// m_timer = this->create_wall_timer(std::chrono::seconds(1), [this] () { this->publishBaseMotorRotation(BASE_MOTOR_ID); });
+	// RCLCPP_INFO(this->get_logger(), "Constructed");
 }
 
 ImagePublisherNode::~ImagePublisherNode()
@@ -67,7 +67,7 @@ void ImagePublisherNode::getImageCallback(const sensor_msgs::msg::Image::SharedP
 	cv::resize(cv_ptr->image, tmp, {32, 24}, 0, 0, cv::INTER_AREA);
 	cv::cvtColor(tmp, tmp, cv::COLOR_BGR2GRAY);
 	m_detectedScrewType = detectScrewType(tmp);
-	// RCLCPP_INFO(this->get_logger(), "Screw type: %s", getName(m_detectedScrewType).c_str());
+	RCLCPP_INFO(this->get_logger(), "Screw type: %s", getName(m_detectedScrewType).c_str());
 }
 
 bool ImagePublisherNode::checkIfFits(const cv::Mat& frame)
