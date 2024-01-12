@@ -31,7 +31,7 @@ ImagePublisherNode::ImagePublisherNode()
 
 	m_cvBridge = std::make_shared<cv_bridge::CvImage>();
 	m_motorPositionPublsher = this->create_publisher<SetPosition>("/set_position", 10);
-	m_timer = this->create_wall_timer(std::chrono::seconds(1), [this] () { this->publishMotorRotation(BASE_MOTOR_ID, 0); });
+	m_timer = this->create_wall_timer(std::chrono::seconds(1), [this] () { this->publishBaseMotorRotation(BASE_MOTOR_ID); });
 	RCLCPP_INFO(this->get_logger(), "Constructed");
 }
 
@@ -71,7 +71,39 @@ void ImagePublisherNode::getImageCallback(const sensor_msgs::msg::Image::SharedP
 	// RCLCPP_INFO(this->get_logger(), "Screw type: %s", getName(m_detectedScrewType).c_str());
 }
 
-ImagePublisherNode::SetPosition constructMsg(int id, int angle)
+bool ImagePublisherNode::checkIfFits(const cv::Mat& frame)
+{
+	// Convert the frame to grayscale (if needed)
+	cv::Mat grayFrame;
+	cv::cvtColor(frame, grayFrame, cv::COLOR_BGR2GRAY);
+
+	// Apply Gaussian blur
+	cv::GaussianBlur(grayFrame, grayFrame, cv::Size(5, 5), 0);
+
+	// Use Canny edge detection to find edges in the blurred frame
+	cv::Canny(grayFrame, grayFrame, 30, 100);
+
+	// Find lines in the frame using HoughLinesP
+	std::vector<cv::Vec4i> lines;
+	cv::HoughLinesP(grayFrame, lines, 1, CV_PI / 180, 50, 80, 10);
+
+	// Iterate through the lines and check if any line is perpendicular to the top border
+	if (!lines.empty()) {
+		for (const auto& line : lines) {
+			int x1, x2;
+			std::tie(x1, std::ignore, x2, std::ignore) = std::tie(line[0], line[1], line[2], line[3]);
+
+			// Check if the line is approximately vertical
+			if (std::abs(x1 - x2) < 5) { // Adjust the threshold if needed
+				return true; // Return true
+			}
+		}
+	}
+
+	return false; // Return false if not already true
+}
+
+ImagePublisherNode::SetPosition ImagePublisherNode::constructMsg(int id, int angle)
 {
 	SetPosition msg;
 	msg.id = id;
@@ -79,27 +111,27 @@ ImagePublisherNode::SetPosition constructMsg(int id, int angle)
 	return msg;
 }
 
-void ImagePublisherNode::findRotation()
+void ImagePublisherNode::findScrewRotation()
 {
 	for (int i = 0; i < 128; i++) {
-		m_motorPositionPublsher->publish(constructMsg(BASE_MOTOR_ID, i*8));
+		m_motorPositionPublsher->publish(constructMsg(CAMERA_MOTOR_ID, i*8));
 		if (checkIfFits(m_frame)) {
-			m_motorPositionPublsher->publish(constructMsg(BASE_MOTOR_ID, (i-1)*8));
+			m_motorPositionPublsher->publish(constructMsg(CAMERA_MOTOR_ID, (i-1)*8));
 			return;
 		}
 	}
 }
 
-void ImagePublisherNode::publishMotorRotation(int id, int angle)
+void ImagePublisherNode::publishBaseMotorRotation(int id)
 {
 	m_timer->cancel();
 
 	for (int i = 4; i < 7; i++) {
-		m_motorPositionPublsher->publish(constructMsg(BASE_MOTOR_ID, i*80));
+		m_motorPositionPublsher->publish(constructMsg(id, i*80));
 
 		auto screwType = detectScrewType(m_frame);
 		if (screwType == ScrewType::Hexagonal || screwType == ScrewType::Nut) {
-			findRotation();
+			findScrewRotation();
 			RCLCPP_INFO(this->get_logger(), "Rotation found");
 			sleep(1);
 		}
@@ -108,7 +140,6 @@ void ImagePublisherNode::publishMotorRotation(int id, int angle)
 		}
 	}
 }
-
 
 ImagePublisherNode::ScrewType ImagePublisherNode::detectScrewType(cv::Mat frame)
 {

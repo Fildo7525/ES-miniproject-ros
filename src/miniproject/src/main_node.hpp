@@ -48,7 +48,9 @@ private:
 
 	bool checkIfFits(const cv::Mat& frame);
 
-	void findRotation();
+	SetPosition constructMsg(int id, int angle);
+
+	void findScrewRotation();
 
 	/**
 	 * @brief Publishes a desired angle to the dynamixel control node.
@@ -57,9 +59,8 @@ private:
 	 * be in this interval.
 	 *
 	 * @param id Id of the motor to control.
-	 * @param anlge Whished final rotation of the motor
 	 */
-	void publishMotorRotation(int id, int anlge);
+	void publishBaseMotorRotation(int id);
 
 	/**
 	 * @brief Invokes the IP in FPGA and checks if the screw on the image is screwable.
@@ -71,7 +72,7 @@ private:
 
 	std::string getName(ScrewType screwType);
 
-
+private:
 	int m_idx;
 	cv::Mat m_frame;
 	XNn_inference m_inference;
