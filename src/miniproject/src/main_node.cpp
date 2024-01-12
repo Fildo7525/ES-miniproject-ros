@@ -23,22 +23,16 @@ ImagePublisherNode::ImagePublisherNode()
 
 	sleep(2);
 
-	// publisher_ = this->create_publisher<sensor_msgs::msg::Image>("/image_raw", 10);
-
 	m_cameraSubscriber = this->create_subscription<sensor_msgs::msg::Image>(
 		"/image_raw", 10, std::bind(&ImagePublisherNode::getImageCallback, this, std::placeholders::_1));
-
-	m_publisher = this->create_publisher<sensor_msgs::msg::Image>("/processed_img", 10);
 
 	m_cvBridge = std::make_shared<cv_bridge::CvImage>();
 	m_motorPositionPublsher = this->create_publisher<SetPosition>("/set_position", 10);
 	m_timer = this->create_wall_timer(std::chrono::seconds(1), [this] () { this->publishBaseMotorRotation(BASE_MOTOR_ID); });
-	RCLCPP_INFO(this->get_logger(), "Constructed");
 }
 
 ImagePublisherNode::~ImagePublisherNode()
 {
-	RCLCPP_INFO(this->get_logger(), "Destroyed");
 	XNn_inference_Release(&m_inference);
 }
 
@@ -53,13 +47,6 @@ std::vector<float> ImagePublisherNode::flatten(cv::Mat image)
 	return flattenedVector;
 }
 
-void ImagePublisherNode::publishImage(const cv::Mat &frame)
-{
-	// Publish the ROS Image message to the /image_raw topic
-	auto ros_image_msg = cv_bridge::CvImage(std_msgs::msg::Header(), "mono8", frame).toImageMsg();
-	m_publisher->publish(*ros_image_msg);
-}
-
 void ImagePublisherNode::getImageCallback(const sensor_msgs::msg::Image::SharedPtr msg)
 {
 	cv::Mat tmp;
@@ -69,7 +56,6 @@ void ImagePublisherNode::getImageCallback(const sensor_msgs::msg::Image::SharedP
 	cv::resize(cv_ptr->image, tmp, {32, 24}, 0, 0, cv::INTER_AREA);
 	cv::cvtColor(tmp, tmp, cv::COLOR_BGR2GRAY);
 	m_detectedScrewType = detectScrewType(tmp);
-	// RCLCPP_INFO(this->get_logger(), "Screw type: %s", getName(m_detectedScrewType).c_str());
 }
 
 bool ImagePublisherNode::checkIfFits(const cv::Mat& frame)

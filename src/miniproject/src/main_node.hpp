@@ -84,8 +84,6 @@ private:
 	// Subscriber to the /image_raw topic that the camera node created.
 	rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr m_cameraSubscriber;
 
-	// Publishers
-	rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr m_publisher;
 	rclcpp::Publisher<SetPosition>::SharedPtr m_motorPositionPublsher;
 	std::shared_ptr<cv_bridge::CvImage> m_cvBridge;
 };
