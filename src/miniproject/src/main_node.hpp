@@ -16,7 +16,7 @@
 
 #define IMG_SIZE 32*24
 
-class ImagePublisherNode
+class MiniprojectNode
 	: public rclcpp::Node
 {
 public:
@@ -35,8 +35,8 @@ public:
 	using SetPosition = dynamixel_sdk_custom_interfaces::msg::SetPosition;
 	using GetPosition = dynamixel_sdk_custom_interfaces::srv::GetPosition;
 
-	ImagePublisherNode();
-	~ImagePublisherNode();
+	MiniprojectNode();
+	~MiniprojectNode();
 
 private:
 

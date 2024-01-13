@@ -11,7 +11,7 @@
 #define BASE_MOTOR_ID 1
 #define CAMERA_MOTOR_ID 2
 
-ImagePublisherNode::ImagePublisherNode()
+MiniprojectNode::MiniprojectNode()
 	: rclcpp::Node("main_node")
 	, m_idx(1)
 {
@@ -31,12 +31,12 @@ ImagePublisherNode::ImagePublisherNode()
 	m_timer = this->create_wall_timer(std::chrono::seconds(1), [this] () { this->publishBaseMotorRotation(BASE_MOTOR_ID); });
 }
 
-ImagePublisherNode::~ImagePublisherNode()
+MiniprojectNode::~MiniprojectNode()
 {
 	XNn_inference_Release(&m_inference);
 }
 
-std::vector<float> ImagePublisherNode::flatten(cv::Mat image)
+std::vector<float> MiniprojectNode::flatten(cv::Mat image)
 {
 	// Flatten the image
 	cv::Mat flattenedImage = image.reshape(1, 1);
@@ -47,7 +47,7 @@ std::vector<float> ImagePublisherNode::flatten(cv::Mat image)
 	return flattenedVector;
 }
 
-void ImagePublisherNode::getImageCallback(const sensor_msgs::msg::Image::SharedPtr msg)
+void MiniprojectNode::getImageCallback(const sensor_msgs::msg::Image::SharedPtr msg)
 {
 	cv::Mat tmp;
 	// convert ros Image to cv Image.
@@ -58,7 +58,7 @@ void ImagePublisherNode::getImageCallback(const sensor_msgs::msg::Image::SharedP
 	m_detectedScrewType = detectScrewType(tmp);
 }
 
-bool ImagePublisherNode::checkIfFits(const cv::Mat& frame)
+bool MiniprojectNode::checkIfFits(const cv::Mat& frame)
 {
 	// Convert the frame to grayscale (if needed)
 	cv::Mat grayFrame;
@@ -90,7 +90,7 @@ bool ImagePublisherNode::checkIfFits(const cv::Mat& frame)
 	return false; // Return false if not already true
 }
 
-ImagePublisherNode::SetPosition ImagePublisherNode::constructMsg(int id, int angle)
+MiniprojectNode::SetPosition MiniprojectNode::constructMsg(int id, int angle)
 {
 	SetPosition msg;
 	msg.id = id;
@@ -98,7 +98,7 @@ ImagePublisherNode::SetPosition ImagePublisherNode::constructMsg(int id, int ang
 	return msg;
 }
 
-void ImagePublisherNode::findScrewRotation()
+void MiniprojectNode::findScrewRotation()
 {
 	for (int i = 0; i < 512; i++) {
 		m_motorPositionPublsher->publish(constructMsg(CAMERA_MOTOR_ID, i*4));
@@ -111,7 +111,7 @@ void ImagePublisherNode::findScrewRotation()
 	}
 }
 
-void ImagePublisherNode::publishBaseMotorRotation(int id)
+void MiniprojectNode::publishBaseMotorRotation(int id)
 {
 	m_timer->cancel();
 
@@ -130,7 +130,7 @@ void ImagePublisherNode::publishBaseMotorRotation(int id)
 	}
 }
 
-ImagePublisherNode::ScrewType ImagePublisherNode::detectScrewType(cv::Mat frame)
+MiniprojectNode::ScrewType MiniprojectNode::detectScrewType(cv::Mat frame)
 {
 	auto check = flatten(frame);
 
@@ -144,7 +144,7 @@ ImagePublisherNode::ScrewType ImagePublisherNode::detectScrewType(cv::Mat frame)
 	return static_cast<ScrewType>(XNn_inference_Get_Pred_out(&m_inference));
 }
 
-std::string ImagePublisherNode::getName(ScrewType screwType)
+std::string MiniprojectNode::getName(ScrewType screwType)
 {
 	switch (screwType) {
 		case ScrewType::Hexagonal:
@@ -160,8 +160,7 @@ std::string ImagePublisherNode::getName(ScrewType screwType)
 
 int main(int argc, char *argv[]) {
 	rclcpp::init(argc, argv);
-	auto node = std::make_shared<ImagePublisherNode>();
-	rclcpp::spin(node);
+	rclcpp::spin(std::make_shared<MiniprojectNode>());
 	rclcpp::shutdown();
 	return 0;
 }
