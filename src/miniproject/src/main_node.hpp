@@ -73,11 +73,8 @@ private:
 	std::string getName(ScrewType screwType);
 
 private:
-	int m_idx;
 	cv::Mat m_frame;
 	XNn_inference m_inference;
-	std::ofstream file;
-	ScrewType m_detectedScrewType;
 
 	rclcpp::TimerBase::SharedPtr m_timer;
 

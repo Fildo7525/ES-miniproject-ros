@@ -16,7 +16,6 @@
 
 MiniprojectNode::MiniprojectNode()
 	: rclcpp::Node("main_node")
-	, m_idx(1)
 {
 	int status = XNn_inference_Initialize(&m_inference, IP_BLOCK_NAME);
 	if (status != XST_SUCCESS) {
@@ -27,7 +26,6 @@ MiniprojectNode::MiniprojectNode()
 	m_cameraSubscriber = this->create_subscription<sensor_msgs::msg::Image>(
 		"/image_raw", 10, std::bind(&MiniprojectNode::getImageCallback, this, std::placeholders::_1));
 
-	m_cvBridge = std::make_shared<cv_bridge::CvImage>();
 	m_motorPositionPublsher = this->create_publisher<SetPosition>("/set_position", 10);
 	m_timer = this->create_wall_timer(std::chrono::seconds(2), [this] () { this->publishBaseMotorRotation(BASE_MOTOR_ID); });
 }
@@ -50,7 +48,6 @@ std::vector<float> MiniprojectNode::flatten(cv::Mat image)
 
 void MiniprojectNode::getImageCallback(const sensor_msgs::msg::Image::SharedPtr msg)
 {
-	cv::Mat tmp;
 	cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, "bgr8");
 	// Check for empty frame.
 	if (cv_ptr->image.empty()) {
@@ -58,9 +55,6 @@ void MiniprojectNode::getImageCallback(const sensor_msgs::msg::Image::SharedPtr 
 	}
 
 	m_frame = cv_ptr->image;
-	cv::resize(cv_ptr->image, tmp, {32, 24}, 0, 0, cv::INTER_AREA);
-	cv::cvtColor(tmp, tmp, cv::COLOR_BGR2GRAY);
-	m_detectedScrewType = detectScrewType(tmp);
 }
 
 bool MiniprojectNode::checkIfFits(const cv::Mat& frame)
@@ -105,7 +99,7 @@ MiniprojectNode::SetPosition MiniprojectNode::constructMsg(int id, int angle)
 
 void MiniprojectNode::findScrewRotation()
 {
-	for (int i = 0; i < 512; i++) {
+	for (int i = 0; i < 256; i++) {
 		m_motorPositionPublsher->publish(constructMsg(CAMERA_MOTOR_ID, i*4));
 		RCLCPP_DEBUG(this->get_logger(), std::string("Checking rotation: ") + std::to_string(i*4 * MOTRO_IMPULZES_TO_ANGLES));
 		usleep(500);
@@ -141,6 +135,9 @@ void MiniprojectNode::publishBaseMotorRotation(int id)
 
 MiniprojectNode::ScrewType MiniprojectNode::detectScrewType(cv::Mat frame)
 {
+	cv::resize(frame, frame, {32, 24}, 0, 0, cv::INTER_AREA);
+	cv::cvtColor(frame, frame, cv::COLOR_BGR2GRAY);
+
 	auto check = flatten(frame);
 
 	while (!XNn_inference_IsReady(&m_inference)) {}
