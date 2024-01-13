@@ -8,14 +8,16 @@
 // 0.29 degrees per 1 impulse.
 // Angles 300 - 360 are in invalid range.
 #define MOTRO_ANGLES_TO_IMPULZES (1/0.29)
+#define MOTRO_IMPULZES_TO_ANGLES 0.29
 #define BASE_MOTOR_ID 1
 #define CAMERA_MOTOR_ID 2
+#define IP_BLOCK_NAME "nn_inference"
 
 MiniprojectNode::MiniprojectNode()
 	: rclcpp::Node("main_node")
 	, m_idx(1)
 {
-	int status = XNn_inference_Initialize(&m_inference, "nn_inference");
+	int status = XNn_inference_Initialize(&m_inference, IP_BLOCK_NAME);
 	if (status != XST_SUCCESS) {
 		std::cout << "Could not initialize IP block.\n";
 		exit(1);
