@@ -1,6 +1,7 @@
 #include "main_node.hpp"
 #include <algorithm>
 #include <iterator>
+#include <stdexcept>
 #include <vector>
 #include <iostream>
 
@@ -19,18 +20,16 @@ MiniprojectNode::MiniprojectNode()
 {
 	int status = XNn_inference_Initialize(&m_inference, IP_BLOCK_NAME);
 	if (status != XST_SUCCESS) {
-		std::cout << "Could not initialize IP block.\n";
-		exit(1);
+		RCLCPP_ERROR(this->get_logger(), "Could not initialize IP block.\n");
+		throw std::runtime_error("Could not initialize IP block\n");
 	}
 
-	sleep(2);
-
 	m_cameraSubscriber = this->create_subscription<sensor_msgs::msg::Image>(
-		"/image_raw", 10, std::bind(&ImagePublisherNode::getImageCallback, this, std::placeholders::_1));
+		"/image_raw", 10, std::bind(&MiniprojectNode::getImageCallback, this, std::placeholders::_1));
 
 	m_cvBridge = std::make_shared<cv_bridge::CvImage>();
 	m_motorPositionPublsher = this->create_publisher<SetPosition>("/set_position", 10);
-	m_timer = this->create_wall_timer(std::chrono::seconds(1), [this] () { this->publishBaseMotorRotation(BASE_MOTOR_ID); });
+	m_timer = this->create_wall_timer(std::chrono::seconds(2), [this] () { this->publishBaseMotorRotation(BASE_MOTOR_ID); });
 }
 
 MiniprojectNode::~MiniprojectNode()
@@ -52,8 +51,12 @@ std::vector<float> MiniprojectNode::flatten(cv::Mat image)
 void MiniprojectNode::getImageCallback(const sensor_msgs::msg::Image::SharedPtr msg)
 {
 	cv::Mat tmp;
-	// convert ros Image to cv Image.
 	cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, "bgr8");
+	// Check for empty frame.
+	if (cv_ptr->image.empty()) {
+		return;
+	}
+
 	m_frame = cv_ptr->image;
 	cv::resize(cv_ptr->image, tmp, {32, 24}, 0, 0, cv::INTER_AREA);
 	cv::cvtColor(tmp, tmp, cv::COLOR_BGR2GRAY);
@@ -104,11 +107,13 @@ void MiniprojectNode::findScrewRotation()
 {
 	for (int i = 0; i < 512; i++) {
 		m_motorPositionPublsher->publish(constructMsg(CAMERA_MOTOR_ID, i*4));
+		RCLCPP_DEBUG(this->get_logger(), std::string("Checking rotation: ") + std::to_string(i*4 * MOTRO_IMPULZES_TO_ANGLES));
 		usleep(500);
 
 		if (checkIfFits(m_frame)) {
 			m_motorPositionPublsher->publish(constructMsg(CAMERA_MOTOR_ID, (i-1)*4));
-			exit(0);
+			RCLCPP_INFO(this->get_logger(), std::string("Rotation found: ") + std::to_string((i-1)*4 * MOTRO_IMPULZES_TO_ANGLES));
+			return;
 		}
 	}
 }
@@ -117,17 +122,19 @@ void MiniprojectNode::publishBaseMotorRotation(int id)
 {
 	m_timer->cancel();
 
-	for (int i = 4; i < 7; i++) {
-		m_motorPositionPublsher->publish(constructMsg(id, i*80));
+	for (int i = 5; i < 8; i++) {
+		auto msg = constructMsg(id, i*80);
+		RCLCPP_DEBUG(this->get_logger(), "Sending to motor: [ID]: %d [POSITION]: %d", msg.id, msg.position);
+		m_motorPositionPublsher->publish(msg);
+		sleep(1);
 
 		auto screwType = detectScrewType(m_frame);
 		if (screwType == ScrewType::Hexagonal || screwType == ScrewType::Nut) {
 			findScrewRotation();
-			RCLCPP_INFO(this->get_logger(), "Rotation found");
 			sleep(1);
 		}
 		else {
-			RCLCPP_INFO(this->get_logger(), "Incorrect type of screw");
+			RCLCPP_WARN(this->get_logger(), "Incorrect type of screw");
 		}
 	}
 }
@@ -143,7 +150,9 @@ MiniprojectNode::ScrewType MiniprojectNode::detectScrewType(cv::Mat frame)
 
 	while (!XNn_inference_IsDone(&m_inference)) {}
 
-	return static_cast<ScrewType>(XNn_inference_Get_Pred_out(&m_inference));
+	auto screwer =  static_cast<ScrewType>(XNn_inference_Get_Pred_out(&m_inference));
+	RCLCPP_DEBUG(this->get_logger(), "Detected screw type: %s", getName(screwer).c_str());
+	return screwer;
 }
 
 std::string MiniprojectNode::getName(ScrewType screwType)
